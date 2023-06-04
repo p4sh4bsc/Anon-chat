@@ -3,10 +3,13 @@ import sys
 import os
 import time
 from art import *
+import random
+import string
+import hashlib
 
 
 
-
+characters = string.ascii_letters + string.digits
 
 class Server():
     def main_server():
@@ -24,7 +27,6 @@ class Start():
 
 
         #### read open ports ####
-
         list_of_ports = []
 
         for i in range(65536):
@@ -41,16 +43,46 @@ class Start():
 
         os.system("clear")
         tprint("Anon    chat")
-        command = str(input("Are you [C]lient or [S]erver?\n"))
+        command = str(input("Are you [S]erver or [C]lient?\n"))
 
-        if command == "C":
-            print(list_of_ports)
-        elif command == "S":
+        if command == "S":
+            key_is_correct = False
+            ip_adr = "127.0.0.1"
+
+            while not key_is_correct:
+                os.system("clear")
+                tprint("Anon    chat")
+                private_key = "?" + ''.join(random.choice(characters) for i in range(6))
+                print(f"checking key {private_key} for unic.")
+                time.sleep(0.75)
+                os.system("clear")
+                tprint("Anon    chat")
+                print(f"checking key {private_key} for unic..")
+                time.sleep(0.75)
+                os.system("clear")
+                tprint("Anon    chat")
+                print(f"checking key {private_key} for unic...")
+                time.sleep(0.75)
+                
+                hash_object = hashlib.sha256(bytes(private_key.encode('utf-8')))
+                hash_dig = hash_object.hexdigest()
+                numbers = ''.join(i for i in hash_dig if not i.isalpha())
+                port_for_key = int(sum(list(map(int, numbers)))**1.64)
+                time.sleep(0.3)
+
+                if port_for_key not in list_of_ports or port_for_key < 2000:
+                    key_is_correct = True
+                    os.system("clear")
+                    tprint("Anon    chat")
+                    print(f"done! {private_key} is correct")
+                    print(f"!!! for debug port is {port_for_key} !!!")
+            
+
+        elif command == "C":
             print(list_of_ports)
         else:
             
             Start.main_start()
-
 
 
 if __name__ == "__main__":
