@@ -12,11 +12,12 @@ import threading
 characters = string.ascii_letters + string.digits
 
 class Server():
-    def __init__(self, ip_adr, port, key):
+    def __init__(self, ip_adr, port, key, nickname):
 
         self.ip_adr = ip_adr
         self.port = port
         self.key = key
+        self.nickname = nickname
         self.socket = None
         self.socketConnection = None
         self.connectionAddress = None
@@ -43,8 +44,9 @@ class Server():
     def sendMsg(self):
         while True:
             keyboardInput = input("\nEnter your msg: ")
-            messageToSend = keyboardInput.encode('utf-8')
 
+            message_enc = keyboardInput.encode('utf-8')
+            nickname_enc = self.nickname.encode('utf-8')
             try:
                 self.socketConnection.send(messageToSend)
             except socket.error as error:
@@ -75,10 +77,11 @@ class Server():
 
 
 class Client():
-    def __init__(self, ip_adr, port, key):
+    def __init__(self, ip_adr, port, key, nickname):
         self.ip_adr = ip_adr
         self.port = port 
         self.key = key
+        self.nickname = nickname
         self.socket = None
     
     def connect_to_server(self):
@@ -162,7 +165,7 @@ class Start():
         if command == "S":
             key_is_correct = False
             ip_adr = "localhost"
-
+            nickname = input("Enter your nickname for chat: ")
             while not key_is_correct:
                 os.system("clear")
                 tprint("Anon    chat")
@@ -191,7 +194,7 @@ class Start():
                     print(f"done! {private_key} is correct")
                     print(f"!!! for debug port is {port_for_key} !!!")
 
-            server = Server(ip_adr, port_for_key, private_key)
+            server = Server(ip_adr, port_for_key, private_key, nickname)
             isCreated = server.create_server()
             if isCreated:
                 server.runServer()
@@ -203,7 +206,7 @@ class Start():
             ip_adr = "localhost"
 
             private_key_for_client = input("Enter the key: ")
-
+            
             hash_object = hashlib.sha256(bytes(private_key_for_client.encode('utf-8')))
             hash_dig = hash_object.hexdigest()
             numbers = ''.join(i for i in hash_dig if not i.isalpha())
@@ -216,8 +219,8 @@ class Start():
                 tprint("Anon    chat")
                 print(f"done! {private_key_for_client} is correct")
                 print(f"!!! for debug port is {port_for_key} !!!")
-
-            client = Client(ip_adr, port_for_key, private_key_for_client)
+            nickname = input("Enter your nickname for chat: ")
+            client = Client(ip_adr, port_for_key, private_key_for_client, nickname)
             isConnected = client.connect_to_server()
             if isConnected:
                 client.runClient()
