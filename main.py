@@ -27,9 +27,10 @@ class Server():
         self.socket.bind((self.ip_adr, self.port))
         self.socket.listen(1)
         print(f"Creating chat by key {self.key}...")
-        time.sleep(1)
+        
         
         try:
+            print(1)
             self.socketConnection, self.connectionAddress = self.socket.accept()
             print("Chat created!")
             return True
@@ -41,12 +42,11 @@ class Server():
         
     def sendMsg(self):
         while True:
-            keyboardInput = input()
+            keyboardInput = input("\nEnter your msg: ")
             messageToSend = keyboardInput.encode('utf-8')
 
             try:
                 self.socketConnection.send(messageToSend)
-                print(f"Message sent: {messageToSend}")
             except socket.error as error:
                 print("I cant send this message, sorry")
                 print(error)
@@ -55,7 +55,7 @@ class Server():
         while True:
             receivedMsg = self.socketConnection.recv(128)
             receivedString = receivedMsg.decode('utf-8')
-            print(f"Received Message: {receivedMsg}")
+            print(f"\nReceived Message: {receivedString}")
 
     def runServer(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -102,12 +102,11 @@ class Client():
     
     def sendMsg(self):
         while True:
-            msg_from_input = input()
+            msg_from_input = input("\nEnter message for send: ")
             msg_for_send = msg_from_input.encode("utf-8")
 
             try:
-                self.socket.send(msg_from_input)
-                print(f"You send {msg_for_send}")
+                self.socket.send(msg_for_send)
             except socket.error as error:
                 print("Sorry, we can't send your message")
                 print(error)
@@ -116,11 +115,11 @@ class Client():
         while True:
             receiveMsg = self.socket.recv(128)
             receiveString = receiveMsg.decode("utf-8")
-            print(f"You get the msg {receiveString}")
+            print(f"\nYou get the msg {receiveString}")
     
     def runClient(self):
         sendThread = threading.Thread(target=self.sendMsg)
-        receiveThread = threading.Thread(target=self.receiveMsg)
+        receiveThread = threading.Thread(target=self.recieveMsg)
 
         sendThread.start()
         receiveThread.start()
@@ -154,11 +153,15 @@ class Start():
 
         os.system("clear")
         tprint("Anon    chat")
+
+
+
+
         command = str(input("Are you [S]erver or [C]lient?\n"))
 
         if command == "S":
             key_is_correct = False
-            ip_adr = "127.0.0.1"
+            ip_adr = "localhost"
 
             while not key_is_correct:
                 os.system("clear")
@@ -187,17 +190,37 @@ class Start():
                     tprint("Anon    chat")
                     print(f"done! {private_key} is correct")
                     print(f"!!! for debug port is {port_for_key} !!!")
-            
-            isCreated = Server.create_server()
+
+            server = Server(ip_adr, port_for_key, private_key)
+            isCreated = server.create_server()
             if isCreated:
-                Server.runServer()
+                server.runServer()
             else:
                 print("Error while creating server")
                 exit()
+
         elif command == "C":
-            isConnected = Client.connect_to_server()
+            ip_adr = "localhost"
+
+            private_key_for_client = input("Enter the key: ")
+
+            hash_object = hashlib.sha256(bytes(private_key_for_client.encode('utf-8')))
+            hash_dig = hash_object.hexdigest()
+            numbers = ''.join(i for i in hash_dig if not i.isalpha())
+            port_for_key = int(sum(list(map(int, numbers)))**1.64)
+            time.sleep(0.3)
+
+            if port_for_key not in list_of_ports or port_for_key < 2000:
+                key_is_correct = True
+                os.system("clear")
+                tprint("Anon    chat")
+                print(f"done! {private_key_for_client} is correct")
+                print(f"!!! for debug port is {port_for_key} !!!")
+
+            client = Client(ip_adr, port_for_key, private_key_for_client)
+            isConnected = client.connect_to_server()
             if isConnected:
-                Client.runServer()
+                client.runClient()
             else:
                 print("Error while connecting to server")
                 exit()
@@ -220,32 +243,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-
-"""
-mas = [20, 21, 22, 23, 25, 42, 43, 53, 67, 69, 80, 110, 115, 123, 137, 138, 139, 143, 161, 179, 443, 445, 514, 515, 993, 995, 1080, 1194, 1433, 1702, 1723, 3128, 3268, 3306, 3389, 5432, 5060, 5900, 5938, 8080, 10000, 20000]
-print ('«Простейший сканер портов на питоне»')
-print ('» «')
-host = input('Введите имя сайта или IP адрес: ')
-print ('«———————————«')
-print ('«Ожидайте идёт сканирование портов!»')
-print ('«———————————«')
-for i in range(65536):
-    s = socket.socket()
-    s.settimeout(1)
-    try:
-        s.connect((host, i))
-    except socket.error:
-        pass
-    else:
-        s.close
-        print (host + ': ' + str(i) + ' порт активен')
-print ('«———————————«')
-print ('«Процесс завершен»')
-"""
