@@ -6,19 +6,76 @@ from art import *
 import random
 import string
 import hashlib
-
+import threading
 
 
 characters = string.ascii_letters + string.digits
 
 class Server():
-    def main_server():
-        pass
+    def __init__(self, ip_adr, port, key):
+
+        self.ip_adr = ip_adr
+        self.port = port
+        self.key = key
+        self.socket = None
+        self.socketConnection = None
+        self.connectionAddress = None
+
+    def create_chat(self):
+
+        self.socket = socket.socket()
+        self.socket.bind((self.ip_adr, self.port))
+        self.socket.listen(1)
+        print(f"Creating chat by key {self.key}...")
+        time.sleep(1)
+        
+        try:
+            self.socketConnection, self.connectionAddress = self.socket.accept()
+            print("Chat created!")
+        except socket.error as error:
+            print("Something goes wrong")
+            print(error)
+            self.socket.close()
+    def sendMsg(self):
+        while True:
+            keyboardInput = input()
+            messageToSend = keyboardInput.encode('utf-8')
+
+            try:
+                self.socketConnection.send(messageToSend)
+                print(f"Message sent: {messageToSend}")
+            except socket.error as error:
+                print("I cant send this message, sorry")
+                print(error)
+
+    def receiveMsg(self):
+        while True:
+            receivedMsg = self.socketConnection.recv(128)
+            receivedString = receivedMsg.decode('utf-8')
+            print(f"Received Message: {receivedMsg}")
+
+    def runServer(self):
+        sendThread = threading.Thread(target=self.sendMsg)
+        receiveThread = threading.Thread(target=self.receiveMsg)
+
+        sendThread.start()
+        receiveThread.start()
+
+        sendThread.join()
+        receiveThread.join()
+
+    def closeConnection(self):
+        self.socketConnection.close()
+        self.socket.close()
+        self.connectionAddress = None
+
+
+
+
 
 
 class Client():
-    def main_client():
-        pass
+    pass
 
 
 
