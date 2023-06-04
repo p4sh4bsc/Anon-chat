@@ -26,7 +26,7 @@ class Server():
 
         self.socket = socket.socket()
         self.socket.bind((self.ip_adr, self.port))
-        self.socket.listen(1)
+        self.socket.listen(3)
         print(f"Creating chat by key {self.key}...")
         
         
@@ -44,7 +44,8 @@ class Server():
     def sendMsg(self):
         while True:
             list_for_join = []
-            keyboardInput = input("\nEnter your msg: ")
+            keyboardInput = input()
+
 
             message_enc = keyboardInput.encode('utf-8')
 
@@ -71,7 +72,7 @@ class Server():
             nickname.replace("\x00", "")
             message = receivedString[0:-16]
 
-            print(f"\n{nickname}: {message}")
+            print(f"{nickname}: {message}")
 
     def runServer(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -121,7 +122,7 @@ class Client():
         while True:
             list_for_join = []
 
-            keyboardInput = input("\nEnter message for send: ")
+            keyboardInput = input()
             message_enc = keyboardInput.encode("utf-8")
 
             nickname_enc = self.nickname.encode('utf-8')
@@ -146,7 +147,7 @@ class Client():
             nickname = receivedString[-16::]
             nickname.replace("\x00", "")
             message = receivedString[0:-16]
-            print(f"\n{nickname}: {message}")
+            print(f"{nickname}: {message}")
     
     def runClient(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -256,7 +257,7 @@ class Start():
                 print("Error while connecting to server")
                 exit()
         else:
-            
+            print("wrong input, restarting software")
             Start.main_start()
 
 
