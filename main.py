@@ -21,7 +21,7 @@ class Server():
         self.socketConnection = None
         self.connectionAddress = None
 
-    def create_chat(self):
+    def create_server(self):
 
         self.socket = socket.socket()
         self.socket.bind((self.ip_adr, self.port))
@@ -32,10 +32,13 @@ class Server():
         try:
             self.socketConnection, self.connectionAddress = self.socket.accept()
             print("Chat created!")
+            return True
         except socket.error as error:
             print("Something goes wrong")
             print(error)
             self.socket.close()
+            return False
+        
     def sendMsg(self):
         while True:
             keyboardInput = input()
@@ -71,11 +74,62 @@ class Server():
 
 
 
-
-
-
 class Client():
-    pass
+    def __init__(self, ip_adr, port, key):
+        self.ip_adr = ip_adr
+        self.port = port 
+        self.key = key
+        self.socket = None
+    
+    def connect_to_server(self):
+        self.socket = socket.socket()
+        count_of_connection = 0
+        while True:
+            try:
+                self.socket.connect((self.ip_adr, self.port))
+                break
+            except socket.error as error:
+                print("Error while connecting to server")
+                print(error)
+                count_of_connection += 1
+                if count_of_connection > 4:
+                    print("You try it for 5+ times, we gonna close your connection")
+                    self.socket.close()
+                    return False
+                time.sleep(1)
+        print("Yes! we in the system")
+        return True
+    
+    def sendMsg(self):
+        while True:
+            msg_from_input = input()
+            msg_for_send = msg_from_input.encode("utf-8")
+
+            try:
+                self.socket.send(msg_from_input)
+                print(f"You send {msg_for_send}")
+            except socket.error as error:
+                print("Sorry, we can't send your message")
+                print(error)
+
+    def recieveMsg(self):
+        while True:
+            receiveMsg = self.socket.recv(128)
+            receiveString = receiveMsg.decode("utf-8")
+            print(f"You get the msg {receiveString}")
+    
+    def runClient(self):
+        sendThread = threading.Thread(target=self.sendMsg)
+        receiveThread = threading.Thread(target=self.receiveMsg)
+
+        sendThread.start()
+        receiveThread.start()
+
+        sendThread.join()
+        receiveThread.join()
+
+    def closeConnection(self):
+        self.socket.close()
 
 
 
@@ -134,9 +188,19 @@ class Start():
                     print(f"done! {private_key} is correct")
                     print(f"!!! for debug port is {port_for_key} !!!")
             
-
+            isCreated = Server.create_server()
+            if isCreated:
+                Server.runServer()
+            else:
+                print("Error while creating server")
+                exit()
         elif command == "C":
-            print(list_of_ports)
+            isConnected = Client.connect_to_server()
+            if isConnected:
+                Client.runServer()
+            else:
+                print("Error while connecting to server")
+                exit()
         else:
             
             Start.main_start()
