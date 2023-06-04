@@ -43,10 +43,19 @@ class Server():
         
     def sendMsg(self):
         while True:
+            list_for_join = []
             keyboardInput = input("\nEnter your msg: ")
 
             message_enc = keyboardInput.encode('utf-8')
+
             nickname_enc = self.nickname.encode('utf-8')
+            need_bytes_of_zero = 16 - len(nickname_enc)
+
+            list_for_join.append(message_enc)
+            list_for_join.append(b'\x00'*need_bytes_of_zero)
+            list_for_join.append(nickname_enc)
+
+            messageToSend = b''.join(list_for_join)
             try:
                 self.socketConnection.send(messageToSend)
             except socket.error as error:
@@ -57,7 +66,12 @@ class Server():
         while True:
             receivedMsg = self.socketConnection.recv(128)
             receivedString = receivedMsg.decode('utf-8')
-            print(f"\nReceived Message: {receivedString}")
+
+            nickname = receivedString[-16::]
+            nickname.replace("\x00", "")
+            message = receivedString[0:-16]
+
+            print(f"\n{nickname}: {message}")
 
     def runServer(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -105,20 +119,34 @@ class Client():
     
     def sendMsg(self):
         while True:
-            msg_from_input = input("\nEnter message for send: ")
-            msg_for_send = msg_from_input.encode("utf-8")
+            list_for_join = []
+
+            keyboardInput = input("\nEnter message for send: ")
+            message_enc = keyboardInput.encode("utf-8")
+
+            nickname_enc = self.nickname.encode('utf-8')
+            need_bytes_of_zero = 16 - len(nickname_enc)
+
+            list_for_join.append(message_enc)
+            list_for_join.append(b'\x00'*need_bytes_of_zero)
+            list_for_join.append(nickname_enc)
+
+            messageToSend = b''.join(list_for_join)
 
             try:
-                self.socket.send(msg_for_send)
+                self.socket.send(messageToSend)
             except socket.error as error:
                 print("Sorry, we can't send your message")
                 print(error)
 
     def recieveMsg(self):
         while True:
-            receiveMsg = self.socket.recv(128)
-            receiveString = receiveMsg.decode("utf-8")
-            print(f"\nYou get the msg {receiveString}")
+            receivedMsg = self.socket.recv(128)
+            receivedString = receivedMsg.decode("utf-8")
+            nickname = receivedString[-16::]
+            nickname.replace("\x00", "")
+            message = receivedString[0:-16]
+            print(f"\n{nickname}: {message}")
     
     def runClient(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -165,7 +193,7 @@ class Start():
         if command == "S":
             key_is_correct = False
             ip_adr = "localhost"
-            nickname = input("Enter your nickname for chat: ")
+            nickname = input("Enter your nickname for chat (max len 16): ")
             while not key_is_correct:
                 os.system("clear")
                 tprint("Anon    chat")
@@ -219,7 +247,7 @@ class Start():
                 tprint("Anon    chat")
                 print(f"done! {private_key_for_client} is correct")
                 print(f"!!! for debug port is {port_for_key} !!!")
-            nickname = input("Enter your nickname for chat: ")
+            nickname = input("Enter your nickname for chat (max len 16): ")
             client = Client(ip_adr, port_for_key, private_key_for_client, nickname)
             isConnected = client.connect_to_server()
             if isConnected:
