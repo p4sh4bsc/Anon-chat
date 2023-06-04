@@ -26,13 +26,13 @@ class Server():
 
         self.socket = socket.socket()
         self.socket.bind((self.ip_adr, self.port))
-        self.socket.listen(3)
+        self.socket.listen(5)
         print(f"Creating chat by key {self.key}...")
         
         
         try:
-            print(1)
             self.socketConnection, self.connectionAddress = self.socket.accept()
+            print(self.socketConnection, self.connectionAddress)
             print("Chat created!")
             return True
         except socket.error as error:
