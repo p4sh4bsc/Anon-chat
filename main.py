@@ -45,6 +45,7 @@ class Server():
 
     def broadcast(self, message):
         for client in self.clients:
+            print(message)
             client.send(message)
 
     def runServer(self):
@@ -65,15 +66,15 @@ class Server():
 
             nickname = receivedString[-16::]
             nickname.replace("\x00", "")
-            
+
             if nickname not in self.nicknames:
                 self.nicknames.append(nickname)
             
             if self.socketConnection not in self.clients:
                 self.clients.append(self.socketConnection)
-                
-            self.broadcast(f'{nickname} has connected to the chat room'.encode('utf-8'))
-            self.socketConnection.send('you are now connected!'.encode('utf-8'))
+
+            nickname_for_send = nickname.replace("\x00", "")
+            self.broadcast(f'\xaa{nickname_for_send} has connected to chat'.encode('utf-8'))
             thread = threading.Thread(target=self.handle_client, args=(self.socketConnection,))
             thread.start()
 
@@ -111,6 +112,20 @@ class Client():
                     return False
                 time.sleep(1)
         print("Yes! we in the system")
+        list_for_join = []
+        nickname_enc = self.nickname.encode('utf-8')
+        need_bytes_of_zero = 16 - len(nickname_enc)
+
+        list_for_join.append(b'\x00'*need_bytes_of_zero)
+        list_for_join.append(nickname_enc)
+
+        messageToSend = b''.join(list_for_join)
+
+        try:
+            self.socket.send(messageToSend)
+        except socket.error as error:
+            print("Sorry, we can't send your message")
+            print(error)
         return True
     
     def sendMsg(self):
@@ -138,11 +153,20 @@ class Client():
     def recieveMsg(self):
         while True:
             receivedMsg = self.socket.recv(128)
-            receivedString = receivedMsg.decode("utf-8")
-            nickname = receivedString[-16::]
-            nickname.replace("\x00", "")
-            message = receivedString[0:-16]
-            print(f"{nickname}: {message}")
+            
+            if receivedMsg[0] == 194:
+                receivedString = receivedMsg.decode("utf-8")
+                print(receivedString[1::])
+            else:
+                receivedString = receivedMsg.decode("utf-8")
+
+                nickname = receivedString[-16::]
+                nickname.replace("\x00", "")
+
+
+                if nickname.replace("\x00", "") != self.nickname.replace("\x00", ""):
+                    message = receivedString[0:-16]
+                    print(f"{nickname}: {message}")
     
     def runClient(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -241,13 +265,17 @@ class Start():
                 print(f"done! {private_key_for_client} is correct")
                 print(f"!!! for debug port is {port_for_key} !!!")
             nickname = input("Enter your nickname for chat (max len 16): ")
+
             client = Client(ip_adr, port_for_key, private_key_for_client, nickname)
+
             isConnected = client.connect_to_server()
+
             if isConnected:
                 client.runClient()
             else:
                 print("Error while connecting to server")
                 exit()
+
         else:
             print("wrong input, restarting software")
             Start.main_start()
