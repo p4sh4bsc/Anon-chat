@@ -56,7 +56,7 @@ class Server():
 
         while True:
             print(self.clients, self.nickname)
-            print('Server is running and listening ...')
+            print(f'Server is running and listening on port {self.port} by private key {self.key}...')
             self.socketConnection, self.connectionAddress = self.socket.accept()
             print(f'connection is established with {str(self.connectionAddress)}')
 
@@ -111,7 +111,6 @@ class Client():
                     self.socket.close()
                     return False
                 time.sleep(1)
-        print("Yes! we in the system")
         list_for_join = []
         nickname_enc = self.nickname.encode('utf-8')
         need_bytes_of_zero = 16 - len(nickname_enc)
@@ -235,16 +234,21 @@ class Start():
                 port_for_key = int(sum(list(map(int, numbers)))**1.64)
                 time.sleep(0.3)
 
-                if port_for_key not in list_of_ports or port_for_key < 2000:
-                    key_is_correct = True
-                    os.system("clear")
-                    tprint("Anon    chat")
-                    print(f"done! {private_key} is correct")
-                    print(f"!!! for debug port is {port_for_key} !!!")
+                if port_for_key not in list_of_ports or port_for_key > 2000:
+                    try:
+                        
+                        os.system("clear")
+                        tprint("Anon    chat")
+                        print(f"trying to create server by private key {private_key}")
+                        server = Server(ip_adr, port_for_key, private_key, nickname)
+                        server.runServer()
+                        
+                        
+                        key_is_correct = True
+                    except:
 
-            server = Server(ip_adr, port_for_key, private_key, nickname)
-
-            server.runServer()
+                        key_is_correct = False
+            
 
 
         elif command == "C":
@@ -263,7 +267,6 @@ class Start():
                 os.system("clear")
                 tprint("Anon    chat")
                 print(f"done! {private_key_for_client} is correct")
-                print(f"!!! for debug port is {port_for_key} !!!")
             nickname = input("Enter your nickname for chat (max len 16): ")
 
             client = Client(ip_adr, port_for_key, private_key_for_client, nickname)
@@ -283,3 +286,6 @@ class Start():
 
 if __name__ == "__main__":
     Start.main_start()
+    #TODO: 1. проверка пользователя не только по нику а еще по ip
+    #      2. нормальная генерация портов
+    #      3. почитать что-то про безопасность и прослушку соединения по порту
