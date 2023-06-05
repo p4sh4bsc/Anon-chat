@@ -7,13 +7,14 @@ import random
 import string
 import hashlib
 import threading
-
+from _thread import *
 
 characters = string.ascii_letters + string.digits
 
 class Server():
+    
     def __init__(self, ip_adr, port, key, nickname):
-
+        
         self.ip_adr = ip_adr
         self.port = port
         self.key = key
@@ -21,68 +22,62 @@ class Server():
         self.socket = None
         self.socketConnection = None
         self.connectionAddress = None
+        self.clients = []
+        self.nicknames = []
 
-    def create_server(self):
+
+    def handle_client(self, client):
+        while True:
+            try:
+                message = client.recv(1024)
+                self.broadcast(message)
+            except:
+                index = self.clients.index(client)
+                self.clients.remove(client)
+                client.close()
+                nickname = self.nicknames[index]
+                self.broadcast(f'{nickname} has left the chat room!'.encode('utf-8'))
+                self.nicknames.remove(nickname)
+                break
+
+
+   
+
+    def broadcast(self, message):
+        for client in self.clients:
+            client.send(message)
+
+    def runServer(self):
 
         self.socket = socket.socket()
         self.socket.bind((self.ip_adr, self.port))
-        self.socket.listen(5)
-        print(f"Creating chat by key {self.key}...")
-        
-        
-        try:
+        self.socket.listen()
+
+        while True:
+            print(self.clients, self.nickname)
+            print('Server is running and listening ...')
             self.socketConnection, self.connectionAddress = self.socket.accept()
-            print(self.socketConnection, self.connectionAddress)
-            print("Chat created!")
-            return True
-        except socket.error as error:
-            print("Something goes wrong")
-            print(error)
-            self.socket.close()
-            return False
-        
-    def sendMsg(self):
-        while True:
-            list_for_join = []
-            keyboardInput = input()
+            print(f'connection is established with {str(self.connectionAddress)}')
 
-
-            message_enc = keyboardInput.encode('utf-8')
-
-            nickname_enc = self.nickname.encode('utf-8')
-            need_bytes_of_zero = 16 - len(nickname_enc)
-
-            list_for_join.append(message_enc)
-            list_for_join.append(b'\x00'*need_bytes_of_zero)
-            list_for_join.append(nickname_enc)
-
-            messageToSend = b''.join(list_for_join)
-            try:
-                self.socketConnection.send(messageToSend)
-            except socket.error as error:
-                print("I cant send this message, sorry")
-                print(error)
-
-    def receiveMsg(self):
-        while True:
             receivedMsg = self.socketConnection.recv(128)
+
             receivedString = receivedMsg.decode('utf-8')
 
             nickname = receivedString[-16::]
             nickname.replace("\x00", "")
-            message = receivedString[0:-16]
+            
+            if nickname not in self.nicknames:
+                self.nicknames.append(nickname)
+            
+            if self.socketConnection not in self.clients:
+                self.clients.append(self.socketConnection)
+                
+            self.broadcast(f'{nickname} has connected to the chat room'.encode('utf-8'))
+            self.socketConnection.send('you are now connected!'.encode('utf-8'))
+            thread = threading.Thread(target=self.handle_client, args=(self.socketConnection,))
+            thread.start()
 
-            print(f"{nickname}: {message}")
-
-    def runServer(self):
-        sendThread = threading.Thread(target=self.sendMsg)
-        receiveThread = threading.Thread(target=self.receiveMsg)
-
-        sendThread.start()
-        receiveThread.start()
-
-        sendThread.join()
-        receiveThread.join()
+        
 
     def closeConnection(self):
         self.socketConnection.close()
@@ -224,12 +219,9 @@ class Start():
                     print(f"!!! for debug port is {port_for_key} !!!")
 
             server = Server(ip_adr, port_for_key, private_key, nickname)
-            isCreated = server.create_server()
-            if isCreated:
-                server.runServer()
-            else:
-                print("Error while creating server")
-                exit()
+
+            server.runServer()
+
 
         elif command == "C":
             ip_adr = "localhost"
