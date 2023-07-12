@@ -9,6 +9,15 @@ import hashlib
 import threading
 from _thread import *
 
+
+import sys
+from PyQt6.QtWidgets import (
+    QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QMainWindow, QScrollArea,QLabel
+)
+
+from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import QSize, Qt
+
 characters = string.ascii_letters + string.digits
 
 class Server():
@@ -53,10 +62,9 @@ class Server():
         self.socket = socket.socket()
         self.socket.bind((self.ip_adr, self.port))
         self.socket.listen()
-
+        print(f'Server is running and listening on port {self.port} by private key {self.key}...')
         while True:
             print(self.clients, self.nickname)
-            print(f'Server is running and listening on port {self.port} by private key {self.key}...')
             self.socketConnection, self.connectionAddress = self.socket.accept()
             print(f'connection is established with {str(self.connectionAddress)}')
 
@@ -129,6 +137,7 @@ class Client():
     
     def sendMsg(self):
         while True:
+
             list_for_join = []
 
             keyboardInput = input()
@@ -165,7 +174,9 @@ class Client():
 
                 if nickname.replace("\x00", "") != self.nickname.replace("\x00", ""):
                     message = receivedString[0:-16]
-                    print(f"{nickname}: {message}")
+                    full_recieved_msg = f"{nickname}: {message}"
+                    print(full_recieved_msg)
+                    return(full_recieved_msg)
     
     def runClient(self):
         sendThread = threading.Thread(target=self.sendMsg)
@@ -212,7 +223,7 @@ class Start():
         if command == "S":
             key_is_correct = False
             ip_adr = "localhost"
-            nickname = input("Enter your nickname for chat (max len 16): ")
+            nickname = None
             while not key_is_correct:
                 os.system("clear")
                 tprint("Anon    chat")
@@ -252,6 +263,7 @@ class Start():
 
 
         elif command == "C":
+
             ip_adr = "localhost"
 
             private_key_for_client = input("Enter the key: ")
@@ -274,7 +286,13 @@ class Start():
             isConnected = client.connect_to_server()
 
             if isConnected:
+                
+
                 client.runClient()
+                
+
+                
+                
             else:
                 print("Error while connecting to server")
                 exit()
@@ -284,8 +302,63 @@ class Start():
             Start.main_start()
 
 
+class App(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.title = 'Anon local chat'
+        self.left = 10
+        self.top = 10
+        self.width = 440
+        self.height = 280
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setFixedSize(500, 500)
+
+
+        self.widget = QWidget(self)
+        self.vbox = QVBoxLayout(self) 
+
+
+
+        self.input_msg = QLineEdit(self)
+        self.input_msg.setGeometry(10, 450, 480, 40)
+        self.input_msg.move(10, 415)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setGeometry(10, 450, 480, 300)
+        self.scroll_area.move(5, 20)
+
+        button_send = QPushButton(self)
+        button_send.setGeometry(450, 450, 55, 35)
+        button_send.move(430, 460)
+        button_send.setText("send")
+        button_send.clicked.connect(self.send_text)
+        button_send.clicked.connect(self.input_msg.clear)
+
+        self.widget.setLayout(self.vbox)
+
+        #Scroll Area Properties
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.widget)
+        
+    def send_text(self):
+        text = self.input_msg.text()
+        object = QLabel(text)
+        self.vbox.addWidget(object)
+        print(self.input_msg.text())
+
+    def get_text(self):
+        object = QLabel("text")
+        self.vbox.addWidget(object)
+
+
 if __name__ == "__main__":
+    
     Start.main_start()
+    
     #TODO: 1. проверка пользователя не только по нику а еще по ip
     #      2. нормальная генерация портов
     #      3. почитать что-то про безопасность и прослушку соединения по порту
