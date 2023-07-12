@@ -8,17 +8,66 @@ import string
 import hashlib
 import threading
 from _thread import *
+from multiprocessing import Process
 
-
-import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QMainWindow, QScrollArea,QLabel
 )
-
+import time
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QSize, Qt
 
 characters = string.ascii_letters + string.digits
+
+class App(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.title = 'Anon local chat'
+        self.left = 10
+        self.top = 10
+        self.width = 440
+        self.height = 280
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setFixedSize(500, 500)
+
+
+        self.widget = QWidget(self)
+        self.vbox = QVBoxLayout(self) 
+
+
+
+        self.input_msg = QLineEdit(self)
+        self.input_msg.setGeometry(10, 450, 480, 40)
+        self.input_msg.move(10, 415)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setGeometry(10, 450, 480, 300)
+        self.scroll_area.move(5, 20)
+
+        button_send = QPushButton(self)
+        button_send.setGeometry(450, 450, 55, 35)
+        button_send.move(430, 460)
+        button_send.setText("send")
+        button_send.clicked.connect(self.send_text)
+        button_send.clicked.connect(self.input_msg.clear)
+
+        self.widget.setLayout(self.vbox)
+
+        #Scroll Area Properties
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.widget)
+        
+    def send_text(self):
+        text = self.input_msg.text()
+        object = QLabel(text)
+        self.vbox.addWidget(object)
+        print(self.input_msg.text())
+
+
 
 class Server():
     
@@ -102,7 +151,13 @@ class Client():
         self.key = key
         self.nickname = nickname
         self.socket = None
-    
+
+    def run_Gui(self):
+        app = QApplication(sys.argv)
+        ex = App()
+        ex.show()
+        sys.exit(app.exec())
+
     def connect_to_server(self):
         self.socket = socket.socket()
         count_of_connection = 0
@@ -159,6 +214,7 @@ class Client():
                 print(error)
 
     def recieveMsg(self):
+
         while True:
             receivedMsg = self.socket.recv(128)
             
@@ -174,19 +230,25 @@ class Client():
 
                 if nickname.replace("\x00", "") != self.nickname.replace("\x00", ""):
                     message = receivedString[0:-16]
-                    full_recieved_msg = f"{nickname}: {message}"
-                    print(full_recieved_msg)
-                    return(full_recieved_msg)
+                    self.full_recieved_msg = f"{nickname}: {message}"
+                    print(self.full_recieved_msg)
     
     def runClient(self):
+        
+        
         sendThread = threading.Thread(target=self.sendMsg)
         receiveThread = threading.Thread(target=self.recieveMsg)
-
+        GuiProc = Process(target=self.run_Gui)
+        
+        GuiProc.start()
         sendThread.start()
         receiveThread.start()
 
         sendThread.join()
         receiveThread.join()
+
+        
+        
 
     def closeConnection(self):
         self.socket.close()
@@ -301,58 +363,6 @@ class Start():
             print("wrong input, restarting software")
             Start.main_start()
 
-
-class App(QMainWindow):
-
-    def __init__(self):
-        super().__init__()
-        self.title = 'Anon local chat'
-        self.left = 10
-        self.top = 10
-        self.width = 440
-        self.height = 280
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setFixedSize(500, 500)
-
-
-        self.widget = QWidget(self)
-        self.vbox = QVBoxLayout(self) 
-
-
-
-        self.input_msg = QLineEdit(self)
-        self.input_msg.setGeometry(10, 450, 480, 40)
-        self.input_msg.move(10, 415)
-
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setGeometry(10, 450, 480, 300)
-        self.scroll_area.move(5, 20)
-
-        button_send = QPushButton(self)
-        button_send.setGeometry(450, 450, 55, 35)
-        button_send.move(430, 460)
-        button_send.setText("send")
-        button_send.clicked.connect(self.send_text)
-        button_send.clicked.connect(self.input_msg.clear)
-
-        self.widget.setLayout(self.vbox)
-
-        #Scroll Area Properties
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.widget)
-        
-    def send_text(self):
-        text = self.input_msg.text()
-        object = QLabel(text)
-        self.vbox.addWidget(object)
-        print(self.input_msg.text())
-
-    def get_text(self):
-        object = QLabel("text")
-        self.vbox.addWidget(object)
 
 
 if __name__ == "__main__":
