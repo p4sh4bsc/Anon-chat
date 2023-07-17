@@ -8,64 +8,15 @@ import string
 import hashlib
 import threading
 from _thread import *
-from multiprocessing import Process
 
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QMainWindow, QScrollArea,QLabel
-)
+import multiprocessing
+import tkinter as tk
 import time
-from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import QSize, Qt
+
 
 characters = string.ascii_letters + string.digits
 
-class App(QMainWindow):
 
-    def __init__(self):
-        super().__init__()
-        self.title = 'Anon local chat'
-        self.left = 10
-        self.top = 10
-        self.width = 440
-        self.height = 280
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setFixedSize(500, 500)
-
-
-        self.widget = QWidget(self)
-        self.vbox = QVBoxLayout(self) 
-
-
-
-        self.input_msg = QLineEdit(self)
-        self.input_msg.setGeometry(10, 450, 480, 40)
-        self.input_msg.move(10, 415)
-
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setGeometry(10, 450, 480, 300)
-        self.scroll_area.move(5, 20)
-
-        button_send = QPushButton(self)
-        button_send.setGeometry(450, 450, 55, 35)
-        button_send.move(430, 460)
-        button_send.setText("send")
-        button_send.clicked.connect(self.send_text)
-        button_send.clicked.connect(self.input_msg.clear)
-
-        self.widget.setLayout(self.vbox)
-
-        #Scroll Area Properties
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.widget)
-        
-    def send_text(self):
-        text = self.input_msg.text()
-        object = QLabel(text)
-        self.vbox.addWidget(object)
-        print(self.input_msg.text())
 
 
 
@@ -145,18 +96,23 @@ class Server():
 
 
 class Client():
-    def __init__(self, ip_adr, port, key, nickname):
+
+    def __init__(self, ip_adr, port, key, nickname, queue, queue_send):
         self.ip_adr = ip_adr
         self.port = port 
         self.key = key
         self.nickname = nickname
         self.socket = None
+        self.root = None
+        self.label1 = None
+        self.button1 = None
+        self.scrollbar = None
+        self.text_output = None
+        self.full_recieved_msg = ''
+        self.queue = queue
+        self.queue_send = queue_send
+        #TODO: queue v __init__ (param) a dalshe hz
 
-    def run_Gui(self):
-        app = QApplication(sys.argv)
-        ex = App()
-        ex.show()
-        sys.exit(app.exec())
 
     def connect_to_server(self):
         self.socket = socket.socket()
@@ -192,26 +148,26 @@ class Client():
     
     def sendMsg(self):
         while True:
+            if not self.queue_send.empty():
+                keyboardInput = self.queue_send.get()
+                list_for_join = []
 
-            list_for_join = []
+                message_enc = keyboardInput.encode("utf-8")
 
-            keyboardInput = input()
-            message_enc = keyboardInput.encode("utf-8")
+                nickname_enc = self.nickname.encode('utf-8')
+                need_bytes_of_zero = 16 - len(nickname_enc)
 
-            nickname_enc = self.nickname.encode('utf-8')
-            need_bytes_of_zero = 16 - len(nickname_enc)
+                list_for_join.append(message_enc)
+                list_for_join.append(b'\x00'*need_bytes_of_zero)
+                list_for_join.append(nickname_enc)
 
-            list_for_join.append(message_enc)
-            list_for_join.append(b'\x00'*need_bytes_of_zero)
-            list_for_join.append(nickname_enc)
+                messageToSend = b''.join(list_for_join)
 
-            messageToSend = b''.join(list_for_join)
-
-            try:
-                self.socket.send(messageToSend)
-            except socket.error as error:
-                print("Sorry, we can't send your message")
-                print(error)
+                try:
+                    self.socket.send(messageToSend)
+                except socket.error as error:
+                    print("Sorry, we can't send your message")
+                    print(error)
 
     def recieveMsg(self):
 
@@ -220,7 +176,7 @@ class Client():
             
             if receivedMsg[0] == 194:
                 receivedString = receivedMsg.decode("utf-8")
-                print(receivedString[1::])
+
             else:
                 receivedString = receivedMsg.decode("utf-8")
 
@@ -231,22 +187,76 @@ class Client():
                 if nickname.replace("\x00", "") != self.nickname.replace("\x00", ""):
                     message = receivedString[0:-16]
                     self.full_recieved_msg = f"{nickname}: {message}"
-                    print(self.full_recieved_msg)
+                    self.queue.put(self.full_recieved_msg)
+
     
+
+
+    def add_lines(self):
+
+        try:
+           
+            if not self.queue.empty():
+                recieved_msg_from_queue = self.queue.get()
+                kastil = "".join(map(str, list(recieved_msg_from_queue))).replace('\x00', '')
+
+                self.text_output.insert("end", kastil + "\n") 
+                self.text_output.see("end")  # Scroll to the end of the Text widget
+            self.root.after(100, self.add_lines)  # Schedule the next update
+        except Exception as ex:
+            print(ex)
+    
+    def send_msg_button(self):
+        msg_for_send = self.entry1.get()
+        self.queue.put(msg_for_send)
+        self.queue_send.put(msg_for_send)
+
+
+    def run_gui(self):
+        self.root= tk.Tk()
+
+        self.label1 = tk.Label(self.root, text='Anon chat')
+        self.label1.config(font=('helvetica', 14))
+        self.label1.place(x=220, y=15)
+
+        self.entry1 = tk.Entry(self.root) 
+        self.entry1.place(x=15, y=400, width=450, height=50)
+
+        self.button1 = tk.Button(self.root, text='send', command=self.send_msg_button)
+        self.button1.place(x=400, y=450)
+
+
+
+        self.scrollbar = tk.Scrollbar(self.root)
+        self.scrollbar.pack(side="right", fill="none", expand=True)
+        self.text_output = tk.Text(self.root, yscrollcommand=self.scrollbar.set)
+        self.text_output.place(x=15, y=50, width=450, height=300)
+        self.scrollbar.config(command=self.text_output.yview)
+
+        self.root.minsize(500, 500)
+        self.root.maxsize(500, 500)
+
+
+        self.root.after(0, self.add_lines)
+        self.root.mainloop()
+
+
     def runClient(self):
         
         
+        guiThread = multiprocessing.Process(target=self.run_gui)
         sendThread = threading.Thread(target=self.sendMsg)
         receiveThread = threading.Thread(target=self.recieveMsg)
-        GuiProc = Process(target=self.run_Gui)
-        
-        GuiProc.start()
+
+        guiThread.start()
         sendThread.start()
         receiveThread.start()
+        
 
         sendThread.join()
         receiveThread.join()
 
+        
         
         
 
@@ -325,7 +335,9 @@ class Start():
 
 
         elif command == "C":
-
+            queue = multiprocessing.Queue()
+            queue_send = multiprocessing.Queue()
+            
             ip_adr = "localhost"
 
             private_key_for_client = input("Enter the key: ")
@@ -343,7 +355,7 @@ class Start():
                 print(f"done! {private_key_for_client} is correct")
             nickname = input("Enter your nickname for chat (max len 16): ")
 
-            client = Client(ip_adr, port_for_key, private_key_for_client, nickname)
+            client = Client(ip_adr, port_for_key, private_key_for_client, nickname, queue, queue_send)
 
             isConnected = client.connect_to_server()
 
