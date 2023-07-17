@@ -208,8 +208,9 @@ class Client():
     
     def send_msg_button(self):
         msg_for_send = self.entry1.get()
-        self.queue.put(msg_for_send)
+        self.queue.put(f'{self.nickname} : {msg_for_send}')
         self.queue_send.put(msg_for_send)
+        self.entry1.delete(0, 'end')
 
 
     def run_gui(self):
