@@ -382,6 +382,6 @@ if __name__ == "__main__":
     
     Start.main_start()
     
-    #TODO: 1. проверка пользователя не только по нику а еще по ip
-    #      2. нормальная генерация портов
-    #      3. почитать что-то про безопасность и прослушку соединения по порту
+    #TODO: 1. check users by ip
+    #      2. create ports for chat by some hash func
+   
