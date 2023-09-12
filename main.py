@@ -383,5 +383,4 @@ if __name__ == "__main__":
     Start.main_start()
     
     #TODO: 1. check users by ip
-    #      2. create ports for chat by some hash func
    
